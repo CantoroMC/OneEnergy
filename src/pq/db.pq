@@ -1,0 +1,1 @@
+"C:\Users\marco\Documents\Home\03_LIABILITIES\Utilities\Energia\Management\db\" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
