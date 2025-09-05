@@ -1,7 +1,7 @@
 let
     Source = Table.PromoteHeaders(
         Csv.Document(
-            File.Contents(Text.Combine({db, "OneEnergy\GME\PUN-MGP.csv"})),
+            File.Contents(Text.Combine({db, "GME\PUN-MGP.csv"})),
             [
                 Delimiter=";",
                 Columns=3,
@@ -106,6 +106,75 @@ let
     RemovedColumns = Table.RemoveColumns(FinalTable,{"IsTimeChangeDay", "DSTFlag"}),
     ReorderedColumns = Table.ReorderColumns(RemovedColumns,{"DateTime", "Date", "Hour", "PUN"}),
     ValueType = Table.TransformColumnTypes(ReorderedColumns,{{"PUN", type number}}),
+    AddFascia =
+    let
+        Holidays = let
+            TimeHorizon = let
+                StartDate = List.Min(ValueType[Date]),
+                EndDate = List.Max(ValueType[Date]),
+                StartYear = Date.Year(StartDate),
+                EndYear = Date.Year(EndDate)
+            in
+                [
+                    StartDate = StartDate,
+                    EndDate = EndDate,
+                    StartYear = StartYear,
+                    EndYear = EndYear
+                ],
+            Horizon = TimeHorizon,
+            StartYear = Horizon[StartYear],
+            EndYear = Horizon[EndYear],
+            StartDate = Horizon[StartDate],
+            EndDate = Horizon[EndDate],
+            allDates = List.Dates(StartDate,Duration.TotalDays(EndDate-StartDate)+1,#duration(1,0,0,0)),
+            Years = {StartYear .. EndYear},
+            holidays = List.Accumulate(
+                Years,
+                #table({},{}),(state,current) =>
+                let
+                    Source = Web.Page(Web.Contents("https://www.officeholidays.com/countries/Italy/" & Number.ToText(current))),
+                    HolidayTable = Table.SelectRows(Source{0}[Data], each ([Type] = "Public Holiday")),
+                    DateCol = Table.SelectColumns(HolidayTable,{"Date","Holiday Name"}),
+                    HolidayDate = Table.TransformColumnTypes(
+                        Table.AddColumn(
+                            DateCol,
+                            "HolidayDate",
+                            each [Date] & " " & Number.ToText(current)
+                        ),
+                        { {"HolidayDate", type date} },
+                        "en-US"
+                    ),
+                    CleanUp = Table.RemoveColumns(HolidayDate,{"Date"})
+                in
+                    state & Table.Distinct(CleanUp)
+            )
+        in
+            holidays,
+        Fascia = Table.AddColumn(
+            ValueType,
+            "Fascia",
+            each let
+                WeekDay = Date.DayOfWeek([Date], Day.Monday),
+                CurrentHour = [Hour],
+                IsHoliday = List.Contains(Holidays[HolidayDate], [Date])
+            in
+                if IsHoliday then "F3"
+                else if WeekDay >= 1 and WeekDay <= 5 then // Lun-Ven
+                    if CurrentHour >= 8 and CurrentHour < 19 then "F1"
+                    else if (CurrentHour >= 7 and CurrentHour < 8) or (CurrentHour >= 19 and CurrentHour < 23) then "F2"
+                    else "F3"
+                else if WeekDay = 6 then // Sabato
+                    if CurrentHour >= 7 and CurrentHour < 23 then "F2"
+                    else "F3"
+                else // Domenica sempre F3
+                    "F3",
+            type text
+        )
+    in
+        Fascia
+in
+    AddFascia
+
     AddFascia = Table.AddColumn(
         ValueType,
         "Fascia",
@@ -126,5 +195,3 @@ let
                 "F3",
         type text
     )
-in
-    AddFascia
