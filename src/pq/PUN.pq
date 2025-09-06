@@ -159,7 +159,7 @@ let
                 IsHoliday = List.Contains(Holidays[HolidayDate], [Date])
             in
                 if IsHoliday then "F3"
-                else if WeekDay >= 1 and WeekDay <= 5 then // Lun-Ven
+                else if WeekDay >= 0 and WeekDay <= 5 then // Lun-Ven
                     if CurrentHour >= 8 and CurrentHour < 19 then "F1"
                     else if (CurrentHour >= 7 and CurrentHour < 8) or (CurrentHour >= 19 and CurrentHour < 23) then "F2"
                     else "F3"
@@ -174,24 +174,3 @@ let
         Fascia
 in
     AddFascia
-
-    AddFascia = Table.AddColumn(
-        ValueType,
-        "Fascia",
-        each let
-            WeekDay = Date.DayOfWeek([Date], Day.Monday),
-            CurrentHour = [Hour],
-            IsHoliday = List.Contains(Holidays[HolidayDate], [Date])
-        in
-            if IsHoliday then "F3"
-            else if WeekDay >= 1 and WeekDay <= 5 then // Lun-Ven
-                if CurrentHour >= 8 and CurrentHour < 19 then "F1"
-                else if (CurrentHour >= 7 and CurrentHour < 8) or (CurrentHour >= 19 and CurrentHour < 23) then "F2"
-                else "F3"
-            else if WeekDay = 6 then // Sabato
-                if CurrentHour >= 7 and CurrentHour < 23 then "F2"
-                else "F3"
-            else // Domenica sempre F3
-                "F3",
-        type text
-    )
