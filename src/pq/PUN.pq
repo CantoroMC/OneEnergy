@@ -1,7 +1,7 @@
 let
     Source = Table.PromoteHeaders(
         Csv.Document(
-            File.Contents(Text.Combine({db, "GME\PUN-MGP.csv"})),
+            File.Contents(Text.Combine({db, "PUN-MGP.csv"})),
             [
                 Delimiter=";",
                 Columns=3,
@@ -26,15 +26,9 @@ let
         "IsTimeChangeDay",
         each let
             date = [Date],
-            LastSundayOfMonth = (year as number, month as number) as date =>
-                let
-                    lastDay = Date.EndOfMonth(#date(year, month, 1)),
-                    daysToSubtract = Date.DayOfWeek(lastDay, Day.Sunday),
-                    lastSunday = Date.AddDays(lastDay, -daysToSubtract)
-                in lastSunday,
             year = Date.Year(date),
-            lastMarchSunday = LastSundayOfMonth(year, 3),
-            lastOctoberSunday = LastSundayOfMonth(year, 10),
+            lastMarchSunday = GetLastSundayOfMonth(year, 3),
+            lastOctoberSunday = GetLastSundayOfMonth(year, 10),
             isMarchChange = date = lastMarchSunday,
             isOctoberChange = date = lastOctoberSunday
         in isMarchChange or isOctoberChange,
@@ -104,73 +98,19 @@ let
         type datetimezone
     ),
     RemovedColumns = Table.RemoveColumns(FinalTable,{"IsTimeChangeDay", "DSTFlag"}),
-    ReorderedColumns = Table.ReorderColumns(RemovedColumns,{"DateTime", "Date", "Hour", "PUN"}),
-    ValueType = Table.TransformColumnTypes(ReorderedColumns,{{"PUN", type number}}),
-    AddFascia =
-    let
-        Holidays = let
-            TimeHorizon = let
-                StartDate = List.Min(ValueType[Date]),
-                EndDate = List.Max(ValueType[Date]),
-                StartYear = Date.Year(StartDate),
-                EndYear = Date.Year(EndDate)
+    AddDateTimeKey = Table.AddColumn(
+        RemovedColumns,
+        "DateTimeZone",
+        each
+            let
+                dateTimeText = DateTime.ToText(DateTime.From([DateTime]), "yyyy-MM-dd HH:mm:ss"),
+                timezoneOffset = DateTimeZone.ZoneHours([DateTime]),
+                timezoneText = if timezoneOffset >= 0 then "+" & Text.From(timezoneOffset) else Text.From(timezoneOffset)
             in
-                [
-                    StartDate = StartDate,
-                    EndDate = EndDate,
-                    StartYear = StartYear,
-                    EndYear = EndYear
-                ],
-            Horizon = TimeHorizon,
-            StartYear = Horizon[StartYear],
-            EndYear = Horizon[EndYear],
-            StartDate = Horizon[StartDate],
-            EndDate = Horizon[EndDate],
-            allDates = List.Dates(StartDate,Duration.TotalDays(EndDate-StartDate)+1,#duration(1,0,0,0)),
-            Years = {StartYear .. EndYear},
-            holidays = List.Accumulate(
-                Years,
-                #table({},{}),(state,current) =>
-                let
-                    Source = Web.Page(Web.Contents("https://www.officeholidays.com/countries/Italy/" & Number.ToText(current))),
-                    HolidayTable = Table.SelectRows(Source{0}[Data], each ([Type] = "Public Holiday")),
-                    DateCol = Table.SelectColumns(HolidayTable,{"Date","Holiday Name"}),
-                    HolidayDate = Table.TransformColumnTypes(
-                        Table.AddColumn(
-                            DateCol,
-                            "HolidayDate",
-                            each [Date] & " " & Number.ToText(current)
-                        ),
-                        { {"HolidayDate", type date} },
-                        "en-US"
-                    ),
-                    CleanUp = Table.RemoveColumns(HolidayDate,{"Date"})
-                in
-                    state & Table.Distinct(CleanUp)
-            )
-        in
-            holidays,
-        Fascia = Table.AddColumn(
-            ValueType,
-            "Fascia",
-            each let
-                WeekDay = Date.DayOfWeek([Date], Day.Monday),
-                CurrentHour = [Hour],
-                IsHoliday = List.Contains(Holidays[HolidayDate], [Date])
-            in
-                if IsHoliday then "F3"
-                else if WeekDay >= 0 and WeekDay <= 5 then // Lun-Ven
-                    if CurrentHour >= 8 and CurrentHour < 19 then "F1"
-                    else if (CurrentHour >= 7 and CurrentHour < 8) or (CurrentHour >= 19 and CurrentHour < 23) then "F2"
-                    else "F3"
-                else if WeekDay = 6 then // Sabato
-                    if CurrentHour >= 7 and CurrentHour < 23 then "F2"
-                    else "F3"
-                else // Domenica sempre F3
-                    "F3",
-            type text
-        )
-    in
-        Fascia
+                dateTimeText & " " & timezoneText & ":00",
+        type text
+    ),
+    ReorderedColumns = Table.ReorderColumns(AddDateTimeKey,{"DateTimeZone", "DateTime", "Date", "Hour", "PUN"}),
+    ValueType = Table.TransformColumnTypes(ReorderedColumns,{{"PUN", type number}})
 in
-    AddFascia
+    ValueType
