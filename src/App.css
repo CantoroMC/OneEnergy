@@ -1,0 +1,104 @@
+/* Migliora la qualità del rendering SVG per Recharts */
+.recharts-wrapper,
+.recharts-surface {
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
+    image-rendering: optimizeQuality;
+}
+
+/* Migliora la qualità dei tooltip */
+.recharts-tooltip-wrapper {
+    filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Migliora la leggibilità del testo */
+.recharts-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    font-smooth: always;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Migliora le linee degli assi */
+.recharts-cartesian-axis-line {
+    stroke-width: 1.5;
+    shape-rendering: crispEdges;
+}
+
+/* Migliora le griglie */
+.recharts-cartesian-grid line {
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+/* Migliora le barre del grafico */
+.recharts-bar-rectangle {
+    shape-rendering: geometricPrecision;
+}
+
+/* Migliora i punti del grafico */
+.recharts-dot {
+    shape-rendering: geometricPrecision;
+}
+
+/* Migliora le linee del grafico */
+.recharts-line-curve {
+    shape-rendering: geometricPrecision;
+}
+
+/* Ottimizzazioni per la qualità generale */
+.recharts-default-tooltip {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(10px);
+}
+
+/* Migliora la leggibilità delle label */
+.recharts-label {
+    font-weight: 500;
+    font-size: 12px;
+}
+
+/* Ottimizzazioni per il responsive */
+.recharts-responsive-container {
+    position: relative;
+}
+
+/* Rimuove effetti di blur indesiderati */
+.recharts-tooltip-cursor {
+    fill-opacity: 0.1;
+}
+
+/* Migliora la leggenda */
+.recharts-legend-item {
+    font-weight: 500;
+}
+
+/* Aggiungi queste regole per forzare l'anti-aliasing */
+.recharts-layer {
+    shape-rendering: geometricPrecision;
+}
+
+/* Ottimizza il rendering su schermi ad alta densità */
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
+    .recharts-surface {
+        shape-rendering: optimizeSpeed;
+    }
+}
+
+/* Classe specifica per grafici ad alta qualità */
+.high-quality-chart svg {
+    shape-rendering: geometricPrecision;
+    text-rendering: geometricPrecision;
+    image-rendering: optimizeQuality;
+}
+
+/* Migliora l'interazione hover */
+.recharts-bar-rectangle:hover {
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
